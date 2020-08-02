@@ -3,6 +3,8 @@ import gpxpy
 import gpxpy.gpx
 import logging 
 import logging.config
+import pandas as pd
+import matplotlib.pyplot as plt
 from math import sin, cos, sqrt, atan2, radians
 
 
@@ -13,8 +15,12 @@ class Activity():
     def __init__(self, path):
         self.path = path
         self.logger = logging.getLogger(__name__)
+        # Start private methods 
         self._load_gpx()
-        self._get_list()
+        self._segment_df = self._get_segment_df()
+        print(self._segment_df)
+        self._segment_df.plot(x='t_cumsum', y='avg_pace')
+        plt.show()
     
     def _load_gpx(self):
         #  Load gpx file from path
@@ -26,18 +32,30 @@ class Activity():
             gpx_file = open(self.path, 'r')
             self.gpx = gpxpy.parse(gpx_file)
 
-    def _get_list(self):
-        # Fix bug were time is greater than 5 seconds (No count), case b/w breaks
+    def _get_segment_df(self):
+        # Return dataframe with activity information
+        t_list = []
+        d_list = []
         for segment in self.gpx.tracks[0].segments:
-            for c1, c2 in zip(segment.points[0::2], segment.points[1::2]):
-                d, t = self._calc_distance(c1, c2)
-                if d:
-                    pace = (1000/(d/t.seconds))/60.0
-                else: 
-                    pace = 0
-                
-                if t.seconds<5: print("Ran with pace {:.2f}, for {:.2f} meters, in {:.2f} seconds".format(pace, d, t.seconds))
-                
+            t = [float((segment.points[i + 1].time - segment.points[i].time).seconds)
+                for i in range(len(segment.points) - 1)]
+
+            d = [self._calc_distance(segment.points[i + 1], segment.points[i]) 
+                for i in range(len(segment.points) - 1)]
+            
+            t_list.extend(t)
+            d_list.extend(d)
+
+        df = pd.DataFrame(zip(d_list, t_list), columns=['delta_d', 'delta_t'])
+        df = df.drop(df[df.delta_t > 6].index)
+        df['pace'] = self._calc_pace(df['delta_d'], df['delta_t'])
+        df['d_cumsum'] = df['delta_d'].cumsum()
+        df['t_cumsum'] = df['delta_t'].cumsum()
+        df['avg_pace'] = self._calc_pace(df['d_cumsum'], df['t_cumsum'])
+
+
+        return df
+
 
     def _calc_distance(self, c1, c2):
         # Return delta-distance and delta-time between two coordinates.
@@ -52,14 +70,17 @@ class Activity():
         a = sin(d_lat / 2)**2 + cos(lat1) * cos(lat2) * sin(d_lon / 2)**2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
-        return R*c, c2.time - c1.time
+        return R*c
 
+    def _calc_pace(self, d, t):
+        # Given d and t will return the pace in min/km
+        return (1000/(d/t))/60.0
 
 if __name__ == "__main__":
     logger_path = os.path.join(os.path.dirname(__file__), 'log', 'logging.conf')
     logging.config.fileConfig(logger_path)
     logger = logging.getLogger(__name__)
 
-    file_path = os.path.join("data", "2020-07-29-201703.gpx")
+    file_path = os.path.join("data", "2020-07-07-190130.gpx")
     activity = Activity(file_path)
 
