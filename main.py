@@ -1,8 +1,12 @@
 import os
-import gpxpy
-import gpxpy.gpx
+import glob
 import logging 
 import logging.config
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from activity import Activity
+
 
 
 if __name__ == "__main__":
@@ -11,15 +15,30 @@ if __name__ == "__main__":
     logging.config.fileConfig(logger_path)
     logger = logging.getLogger(__name__)
 
-    file_path = os.path.join("data", "2020-07-07-190130.gpx")
+    directory_path = os.path.join("data")
 
-    gpx_file = open(file_path, 'r')
-    gpx = gpxpy.parse(gpx_file)
+    total_distance = []
+    duration = []
+    avg_pace = []
+    date = []
+    start_time = []
+    end_time = []
+
+    for filepath in glob.glob(os.path.join(directory_path, '*.gpx')):
+        logger.info(filepath)
+        activity = Activity(filepath)
+        total_distance.append(activity.total_distance)
+        duration.append(activity.duration)
+        avg_pace.append(activity.avg_pace)
+        date.append(activity.date)
+        start_time.append(activity.start_time)
+        end_time.append(activity.end_time)
+
+    df = pd.DataFrame(zip(date, total_distance, duration, avg_pace, start_time, end_time), 
+        columns=['date', 'total_distance', 'duration', 'avg_pace', 'start_time', 'end_time'])
+    df.plot(x='total_distance', y='avg_pace', kind='scatter')
+    plt.show()
 
 
-    for track in gpx.tracks:
-        for segment in track.segments:
-            for point in segment.points:
-                print('Point at ({0},{1}) -> {2}'.format(point.latitude, point.longitude, point.elevation))
-                print(point.time)
+
 
