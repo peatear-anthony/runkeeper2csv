@@ -31,7 +31,6 @@ class Activity():
         self._get_activity_values()
         
         
-        
     def plot(self, x, y):
         # Plot something
         self._segment_df.plot(x=x, y=y)
@@ -44,7 +43,7 @@ class Activity():
             self.logger.error('%s: Path to file does not have gpx extentsion.', self.path)
             raise NameError('Wrong file extentsion')
         else:
-            self.logger.debug("Loading gpx file from path %s", self.path)
+            self.logger.info("Loading gpx file from path %s", self.path)
             gpx_file = open(self.path, 'r')
             self.gpx = gpxpy.parse(gpx_file)
 
@@ -80,7 +79,7 @@ class Activity():
         return df
 
 
-    def _get_splits_df(self):
+    def get_splits_df(self):
         # Calculate the splits for the activity then returns the results in a dic
         indexes = [abs(self._segment_df['d_cumsum'] - km * 1e3).idxmin() 
         for km in range(1, int(self.total_distance / 1e3) + 1)]
@@ -96,9 +95,9 @@ class Activity():
         last_split = round((self._segment_df.iloc[-1].t_cumsum - self._segment_df.iloc[indexes[-1]].t_cumsum) \
             / (self.total_distance / 1e3 - len(splits)), 0)
         splits[round(self.total_distance/1e3, 1)] = str(datetime.timedelta(seconds=last_split))
-
-        self.splits = self._get_splits_df()
-
+        
+        self.splits = splits
+        
         return splits 
 
 
@@ -137,10 +136,8 @@ if __name__ == "__main__":
     logging.config.fileConfig(logger_path)
     logger = logging.getLogger(__name__)
 
-    file_path = os.path.join("data", "2020-01-21-210051.gpx")
+    file_path = os.path.join("data", "2020-08-18-201203.gpx")
     activity = Activity(file_path)
     #activity.plot(x='t_cumsum', y='avg_pace')
-    print(activity.date)
-
-
-
+    
+    print(activity.get_splits_df())
