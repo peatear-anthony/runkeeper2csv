@@ -51,7 +51,7 @@ if __name__ == "__main__":
         if args.activity:
             # Splits to csv
             splits = activity.get_splits_df()
-            activity_df = pd.DataFrame(splits.items())
+            activity_df = pd.DataFrame(splits.items(), columns=['km', 'duration'])
             fname = activity.date.strftime("%Y-%m-%d") + '.csv'
             save_path = os.path.join('csv', 'activity', 'splits', fname)
             activity_df.to_csv(save_path)
